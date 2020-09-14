@@ -6,7 +6,8 @@ class Fetch {
     private static $method = 'GET';
     
     public static function get($url, $data = NULL) {
-        return static::httpRequest($url, $data);
+        $url = http_build_query($data);
+        return static::httpRequest($url);
     }
     
     public static function post($url, $data) {

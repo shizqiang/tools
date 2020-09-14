@@ -180,6 +180,12 @@ class Storage {
         if ($option and $option->first) {
             $this->limit = 1;
         }
+        if ($option and $option->ignore) {
+            $sql = str_replace('insert', 'insert ignore', $sql);
+        }
+        if ($option and $option->replace) {
+            $sql = str_replace('insert', 'replace', $sql);
+        }
         if ($this->limit) {
             $sql .= ' limit ' . $this->limit;
         }

@@ -1,5 +1,8 @@
 [app]
 debug=true
+env=local
+url=http://localhost
+port=4000
 
 [mysql]
 host=120.27.24.27
