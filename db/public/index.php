@@ -1,29 +1,19 @@
 <?php
-require '../autoload.php';
+require __DIR__ . '/../autoload.php';
 
 use utils\db\Storage;
-use utils\db\Model;
-use utils\io\Fetch;
 
+// 获取MySQL实例 
 $mysql = Storage::mysql();
-// $dataList = $mysql->all('sys_merchants');
-// var_dump($dataList);
+
+// 查询所有结果 
+$dataList = $mysql->all('products');
+
+// 查询第一条结果，返回对象 
+$row = $mysql->one('sys_users');
+var_dump($row);
+
 try {
-	// $dataList = $mysql->select('id,name')->limit(20)->all('users');
-	// var_dump($dataList);
-	$m = new Model();
-	$m->name = 'qwe';
-	// $ms = [];
-	// $i = 1;
-	// while ($i <= 2000) {
-	// 	$i++;
-	// 	$m->name = time() . uniqid();
-	// 	$ms[] = $m;
-	// }
-	$dataList = $mysql->search('products');
-	// foreach ($dataList as $key => $value) {
-	// 	println(iconv('utf-8', 'gbk', $value->name));
-	// }
 	print(json_encode($dataList));
 } catch (Exception $e) {
 	println($e->getMessage(), 'red');
@@ -34,4 +24,4 @@ try {
 // $redis = Storage::redis();
 // print $redis->get('name');
 
-print Fetch::get('https://svn.lsa0.cn/upload.php') ;
+// print Fetch::get('https://svn.lsa0.cn/upload.php') ;
