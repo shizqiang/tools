@@ -1,8 +1,9 @@
-console.log(__dirname)
+//console.log(__dirname)
 let user = '051011477981'
 let pass = '32090713'
+//console.log(module.paths);
 	
-	
+var express = require('express');
 var fs = require('fs');
 
 // npm i ini --registry=https://registry.npm.taobao.org
@@ -16,3 +17,4 @@ process.env.PORT = config.app.port;
 // npm i express --registry=https://registry.npm.taobao.org
 var app = express();
 global.config = config
+console.log(app)
