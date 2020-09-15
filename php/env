@@ -5,14 +5,14 @@ url=http://localhost
 port=4000
 
 [mysql]
-host=120.27.24.27
-user=shizq
-pass=shizq123
-db=_00
+host=127.0.0.1
+user=web
+pass=1acctrue1
+db=_10
 charset=
 
 [basic]
-host=120.27.24.27
+host=127.0.0.1
 user=shizq
 pass=shizq123
 db=hls_basic
@@ -22,5 +22,5 @@ charset=gbk
 file=d:\test.db
 
 [redis]
-host=120.27.24.27
+host=127.0.0.1
 auth=Acctrue886

@@ -54,8 +54,13 @@ function redirect($url) {
     exit;
 }
 
-function println($msg = '', $color = 'green', $loading = false) {
+function is_cli() {
+    return (PHP_SAPI === 'cli' OR defined('STDIN'));
+}
+
+function println($msg = '', $color = '', $loading = false) {
     $colors = [
+        ''          => '',
         'red'       => '31',
         'green'     => '32',
         'yellow'    => '33',
@@ -63,15 +68,21 @@ function println($msg = '', $color = 'green', $loading = false) {
         'purple'    => '35',
     ];
     if (!array_key_exists($color, $colors)) {
-        $color = 'purple';
+        $color = '';
     }
     $color = $colors[$color];
     if (is_object($msg) or is_array($msg)) {
         $msg = json_encode($msg);
     }
     $msg = '['.date('Y-m-d H:i:s') . '] -> ' . $msg;
-    print  "\033[{$color}m{$msg}\033[0m";
-    print PHP_EOL;
+    if (is_cli()) {
+        if (empty($color)) {
+            print $msg;
+        } else {
+            print "\033[{$color}m{$msg}\033[0m";
+        }
+        print PHP_EOL;
+    }
     if ($loading) {
         print "\033[?25l";
         print "\033[1A";
