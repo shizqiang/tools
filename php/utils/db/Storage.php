@@ -129,7 +129,7 @@ class Storage {
         return $this->query($sql, $bind, $option);
     }
     
-    public function changedb($db) {
+    public function usedb($db) {
         $_ = $this->pdo->exec('use '. $db);
         if ($_ === false) {
             throw new \Exception('[database ' . $db . ' not exists]');
