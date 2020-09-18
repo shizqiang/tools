@@ -44,7 +44,6 @@ app.use(cookieSession({
 // 验证身份
 app.use(function(req, res, next) {
 	let name = req.session.name;
-	console.log(name)
 	if (name == 'xxx') {
 		next();
 	} else {

@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var utils = require('../utils');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -7,17 +8,11 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/test', async function(req, res, next) {
-	req.session.name = 'xxx';
-	var mysql = require('mysql');
-	var connection = mysql.createConnection(config['mysql']);
-	connection.connect();
-	connection.query('SELECT * from opp_users', function (error, results, fields) {
-	  if (error) throw error;
-	  res.json(results)
+	utils.query('select * from users where id = ?', [1]).then(users => {
+		res.json(users);
+	}).catch(e => {
+		res.end(e.message);
 	});
-
-	connection.end();
-	
 });
 
 module.exports = router;
