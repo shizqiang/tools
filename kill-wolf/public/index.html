@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta name="format-detection" content="telephone=no"/>
+    <title>狼人杀</title>
+    <style type="text/css">
+    	p {
+    		background-color: white;
+    	}
+    </style>
+</head>
+<body>
+<div id="app">
+	<p v-for="player in players" @click="select(player.id)">
+		<span v-if="identity == 'wolf' && player.identity == 'wolf'">🐺</span>
+		{{player.name}}
+		<span v-if="identity == 'wolf'" v-for="vote in player.votes">- {{vote.name}}🗡</span>
+		<span v-if="player.dead"> - ☠️</span>
+	</p>
+	<a href="javascript:;" v-if="!sleeped" @click="sleep">睡觉</a>
+	<a href="javascript:;" v-if="identity == 'witch' && !player.antidote_" @click="antidote(1)">救他</a>
+	<a href="javascript:;" v-if="identity == 'witch' && !player.antidote_" @click="antidote(0)">不救</a>
+</div>
+<script src="/vue-axios-wx.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/app.js"></script>
+<script>
+var socket = io();
+socket.on('connect', _ => {
+	app.names = [];
+	app.sleeped = false;
+	document.body.style.background = '#fff';
+	setTimeout(_ => {
+		var name = prompt('你的名字:');
+		socket.emit('name', name);
+	}, 200);
+});
+
+//名字无效
+socket.on('rename', _ => {
+	setTimeout(_ => {
+		var name = prompt('你的名字:');
+		socket.emit('name', name);
+	}, 200);
+});
+
+// 收到消息
+socket.on('message', message => {
+	alert(message)
+});
+
+// 初始化玩家
+socket.on('players', (players, player) => {
+	app.players = players;
+	app.player = player;
+});
+
+// 玩家加入
+socket.on('join', player => {
+	app.players.push(player)
+});
+
+//玩家退出
+socket.on('leave', playerId => {
+	app.players = app.players.filter(item => {
+		return item.id != playerId;
+	})
+});
+
+// 预言家被唤醒
+socket.on('prophet', _ => {
+	setTimeout(_ => {
+		document.body.style.background = '#006';
+		app.identity = 'prophet';
+	}, 2000);
+});
+
+// 狼人被唤醒
+socket.on('wolf', players => {
+	setTimeout(_ => {
+		document.body.style.background = '#900';
+		app.identity = 'wolf';
+		app.players = players;
+	}, 2000);
+});
+
+// 女巫被唤醒
+socket.on('witch', players => {
+	document.body.style.background = '#090';
+	app.identity = 'witch';
+});
+
+socket.on('hunter', _ => {
+	setTimeout(_ => {
+		document.body.style.background = '#990';
+		app.identity = 'hunter';
+	}, 2000);
+});
+
+// 狼人袭击目标
+socket.on('attack', players => {
+	app.players = players;
+});
+
+//进入黑夜
+socket.on('sleep', _ => {
+	document.body.style.background = '#000';
+});
+
+//成功进入睡眠
+socket.on('sleeped', _ => {
+	app.sleeped = true;
+});
+
+// 天亮了
+socket.on('light', _ => {
+	document.body.style.background = '#FFF';
+});
+
+//天亮了
+socket.on('identity', res => {
+	alert(res)
+});
+
+</script>
+</body>
+</html>
