@@ -11,6 +11,8 @@ app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/index.html');
 });
 
+let roles = ['wolf', 'wolf', 'prophet', 'witch', 'hunter', 'man', 'man', 'man'];
+roles = ['wolf', 'wolf', 'witch', 'prophet'];
 var sockets = [], players = [], night = null, started = false;
 
 function check() {
@@ -33,19 +35,25 @@ function check() {
 			s.player.is_dead = false;
 			s.player.can_use_antidote = false;
 			s.player.can_use_poison = false;
+			s.player.sleep = false;
+			s.player.can_doubt = false;
 			s.emit('human-win');
 		});
 		started = false;
+		console.log('游戏结束，好人胜利');
 	}
-	if (human === 0) {
+	if (human === 0 || (human === 1 && wolf === 1)) {
 		// 狼人获胜
 		sockets.map(s => {
 			s.player.is_dead = false;
 			s.player.can_use_antidote = false;
 			s.player.can_use_poison = false;
+			s.player.sleep = false;
+			s.player.can_doubt = false;
 			s.emit('wolf-win');
 		});
 		started = false;
+		console.log('游戏结束，狼人胜利');
 	}
 	sockets.map(s => {
 		s.emit('players', players, s.player);
@@ -55,6 +63,7 @@ function check() {
 function light() {
 	sockets.map(s => {
 		s.player.votes = [];
+		s.player.tickets = [];
 		s.player.attack_id = '';
 		if (s.player.is_killed_tonight) {
 			s.player.is_dead = true;
@@ -68,11 +77,22 @@ function light() {
 }
 
 io.on('connection', (socket) => {
+	
+	socket.on('heart', _ => {
+	});
 
 	// 玩家取名加入游戏
 	socket.on('name', name => {
 		let player = new modle.Player(socket.client.id, name);
 		socket.player = player;
+		if (started) {
+			socket.emit('message', '游戏进行中，不能加入');
+			return;
+		}
+		if (sockets.length === roles.length) {
+			socket.emit('message', '人数已满');
+			return;
+		}
 		console.log(player.name + ' -> 加入了游戏');
 
 		// 将自己加入玩家
@@ -85,6 +105,9 @@ io.on('connection', (socket) => {
 	
 	// 玩家退出游戏
 	socket.on('disconnect', _ => {
+		if (!socket.player) {
+			return;
+		}
 		console.log(socket.player.name + ' -> 退出了游戏');
 		sockets = sockets.filter(s => {
 			return s.player.id !== socket.player.id;
@@ -95,10 +118,16 @@ io.on('connection', (socket) => {
 		sockets.map(s => {
 			s.emit('players', players, s.player);
 		});
+		if (started) {
+			check();
+		}
 	});
 	
 	// 玩家进入睡觉
 	socket.on('sleep', _ => {
+		if (!socket.player) {
+			return;
+		}
 		socket.player.sleep = true;
 		let num = 0;
 		sockets.map(s => {
@@ -108,9 +137,7 @@ io.on('connection', (socket) => {
 			}
 		});
 		console.log(socket.player.name + ' -> 进入睡眠');
-		
-		let roles = ['wolf', 'wolf', 'prophet', 'witch', 'hunter', 'man', 'man', 'man'];
-		roles = ['wolf', 'man', 'witch', 'prophet'];
+		console.log('当前睡眠人数' + num, roles.length);
 		if (!started && num < roles.length) {
 			console.log('人数不足，无法进入黑夜');
 			return;
@@ -127,8 +154,10 @@ io.on('connection', (socket) => {
 				return Math.random() - 0.5;
 			});
 			// 初始化所有的角色
+			let _roles = [];
 			players.map(p => {
 				p.identity = roles.pop();
+				_roles.push(p.identity);
 				if (p.identity === 'prophet') {
 					p.can_check_identity = true;
 				}
@@ -143,6 +172,7 @@ io.on('connection', (socket) => {
 					p.can_shot = true;
 				}
 			});
+			roles = _roles;
 			sockets.map(s => {
 				s.emit('players', players, s.player);
 			});
@@ -154,6 +184,7 @@ io.on('connection', (socket) => {
 				return;
 			}
 			players.map(p => {
+				
 				if (p.identity === 'prophet') {
 					p.can_check_identity = !p.is_dead;
 				}
@@ -190,9 +221,9 @@ io.on('connection', (socket) => {
 		players.map(p => {
 			if (p.id === id) {
 				if (p.identity === 'wolf') {
-					socket.emit('identity', '狼人');
+					socket.emit('message', p.name + ' -> 狼人');
 				} else {
-					socket.emit('identity', '好人');
+					socket.emit('message', p.name + ' -> 好人');
 				}
 				socket.player.can_check_identity = false;
 				socket.emit('players', false, socket.player);	
@@ -323,7 +354,6 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('ticket', id => {
-		console.log(socket.player.name + " -> " + id);
 		let lastDoubtId = '';
 		sockets.map(s => {
 			// 去掉已经选择的袭击对象
@@ -352,7 +382,7 @@ io.on('connection', (socket) => {
 			if (!s.player.is_dead) {
 				if (s.player.doubt_id === '') {
 					// 有人未投票
-					console.log('有人未投票')
+					console.log('还有人未投票')
 					ready = false;
 				}
 			}
@@ -365,16 +395,20 @@ io.on('connection', (socket) => {
 		}
 		let max = null;
 		sockets.map(s => {
+			if (s.player.is_dead) {
+				return;
+			}
 			if (max == null) {
 				max = s;
 			} else if (s.player.tickets.length > max.player.tickets.length) {
 				max = s;
-			} else if (s.player.tickets.length > 0) {
+			} else if (s.player.tickets.length == max.player.tickets.length) {
 				ready = false;
 			}
 		});
 		// 平票
 		if (!ready) {
+			console.log('平票');
 			return;
 		}
 		max.player.is_dead = true;

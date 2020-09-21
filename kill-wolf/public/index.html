@@ -20,10 +20,10 @@
 	<p v-for="p in players" @click="select(p.id)">
 		<span v-if="p.identity == 'wolf' && player.identity == 'wolf'">🐺</span>
 		<span v-else-if="player.id == p.id && p.identity == 'witch'">🧙‍♀️</span>
-		<span v-else-if="player.id == p.id && p.identity == 'prophet'">🧙‍</span>
+		<span v-else-if="player.id == p.id && p.identity == 'prophet'">🕵️‍♂️️</span>
 		<span v-else-if="player.id == p.id && p.identity == 'hunter'">🔫</span>
-		<span v-else-if="player.id == p.id">👼</span>
-		<span v-else>🧔</span>
+		<span v-else-if="player.id == p.id">😁</span>
+		<span v-else>❓</span>
 		<span v-if="p.sleep">🛌</span>
 		{{p.name}}
 		<span v-if="player.identity == 'wolf'" v-for="vote in p.votes">- {{vote.name}}🗡</span>
@@ -31,10 +31,12 @@
 		<span v-if="p.is_dead"> - ☠️</span>
 		<span v-if="player.identity == 'witch' && p.is_killed_tonight"> - 🗡</span>
 	</p>
+	<p v-if="!player.id"><input v-model="player.name" /><button @click="setName()">进入房间</button></p>
 	<a href="javascript:;" v-if="!player.sleep && !player.is_dead" @click="sleep">睡觉</a>
 	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_antidote && !player.is_dead" @click="antidote(1)">救他</a>
 	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_antidote && !player.is_dead" @click="antidote(0)">不救</a>
 	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_poison && !player.is_dead" @click="select(0)">不毒</a>
+	<p>{{message}}</p>
 </div>
 <script src="/vue-axios-wx.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
@@ -43,18 +45,14 @@
 var socket = io();
 socket.on('connect', _ => {
 	document.body.style.background = '#fff';
-	setTimeout(_ => {
-		var name = prompt('你的名字:');
-		while (!name) {
-			name = prompt('你的名字:');
-		}
-		socket.emit('name', name);
-	}, 200);
+	setInterval(_ => {
+		socket.emit('heart');
+	}, 10000);
 });
 
 // 收到消息
 socket.on('message', message => {
-	alert(message)
+	app.message = message
 });
 
 // 初始化玩家
@@ -69,21 +67,12 @@ socket.on('players', (players, player) => {
 
 // 预言家被唤醒
 socket.on('prophet', _ => {
-	setTimeout(_ => {
-		document.body.style.background = '#006';
-	}, 2000);
-});
-
-socket.on('identity', message => {
-	app.player.can_identity = false;
-	alert(message);
+	document.body.style.background = '#006';
 });
 
 // 狼人被唤醒
 socket.on('wolf', _ => {
-	setTimeout(_ => {
-		document.body.style.background = '#900';
-	}, 2000);
+	document.body.style.background = '#900';
 });
 
 // 女巫被唤醒
@@ -119,12 +108,12 @@ socket.on('light', _ => {
 
 socket.on('wolf-win', _ => {
 	app.player.is_dead = false;
-	alert('狼人胜利');
+	app.message = '狼人胜利'
 });
 
 socket.on('human-win', _ => {
 	app.player.is_dead = false;
-	alert('好人胜利');
+	app.message = '好人胜利'
 });
 </script>
 </body>

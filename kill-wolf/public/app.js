@@ -4,23 +4,31 @@ var app = new Vue({
         name: 'kill wolf',
         night: false,
         players: [],
-        player: {},
+        player: {sleep: true},
+        message: ''
     },
     computed: {
     },
     created() {
     },
     methods: {
+    	
+    	setName: function() {
+    		socket.emit('name', this.player.name);
+    	},
 
     	// 进入黑夜
     	sleep: function() {
-    		socket.emit('sleep');
+    		this.message = '';
+    		if (this.player) {
+    			socket.emit('sleep');
+    		}
         },
         
         // 预言家选择查看身份，狼人选择袭击目标
         select: function(id) {
             if (this.player.is_dead) {
-                alert('你已死亡');
+                this.message = '你已死亡';
                 return;
             }
             if (this.player.identity === 'prophet') {
