@@ -1,78 +1,66 @@
 var Player = function(id, name) {
 	this.id = id;
 	this.name = name;
-	this.dead = false; // 是否死亡
+	this.is_killed_tonight = false; // 是否今晚狼被杀
+	this.is_dead = false; // 是否死亡
+	this.is_police = false; // 是否是警长
 	this.identity = ''; // 身份
+	this.can_check_identity = false; // 预言家可查看身份
 	this.votes = []; // 被投票的人
-	this.doubt = null; // 票谁
-	this.attack = null; // 狼人袭击谁
-	this.sleep = false; // 玩家进入睡眠
-	this.antidote = true; // 解药
-	this.poison = true; // 毒药
-	this.shot = true; // 猎人开枪
-	this.lastWords = false; // 是否可以有遗言
+	this.doubt_id = ''; // 票谁
+	this.can_doubt = false; // 可以投票
+	this.tickets = [];
+	this.can_attack = false;
+	this.attack_id = ''; // 狼人袭击的人
+
+	this.sleep = false; // 玩家是否睡着
+
+	this.has_antidote = false; // 有灵药
+	this.has_poison = false; // 有毒药
+	this.can_use_antidote = false; // 可以使用灵药
+	this.can_use_poison = false; // 可以使用毒药
+
+	this.can_shot = false; // 猎人可以开枪
+
+	this.last_words = false; // 是否可以有遗言
 };
 
 var Day = function() {
 
 };
 
-var Night = function(sockets) {
+var Night = function(sockets, players) {
 	this.sockets = sockets;
-	this.prophet = null; // 预言家查验的人
-	this.attacked = null; // 被袭击的人
-	this.antidote = false; // 是否使用解药
-	this.poison = false; // 是否使用了毒药
+	this.players = players;
+	sockets.map(s => {
+		s.emit('night');
+	});
 };
 
 Night.prototype = {
 
-	// 唤醒预言家和狼人
-	wakeUpProphetAndWolf: function() {
-		let wolfs = [], players = [];
-		for (let socket of Object.values(this.sockets)) {
-			socket.emit('sleep');
-			let player = socket.player;
-			players.push(player);
-			// 唤醒预言家
-			if (player.identity === 'prophet' && !player.dead) {
-				socket.emit('prophet');
-			}
-			// 唤醒狼人
-			if (player.identity === 'wolf' && !player.dead) {
-				wolfs.push(socket);
-			}
-		}
-		wolfs.map(socket => {
-			socket.emit('wolf', players);
-		})
-		
-	},
-
 	// 救活被袭击的人
 	save: function() {
-		let players = [];
-		for (let socket of Object.values(this.sockets)) {
-			let player = socket.player;
-			// 唤醒预言家
-			if (player.id === this.attacked && player.dead) {
-				player.dead = false;
+		this.players.map(p => {
+			if (p.is_killed_tonight) {
+				p.is_killed_tonight = false;
 			}
-		}
+		});
 	},
 
 	// 女巫下毒
 	kill: function(id) {
-		for (let socket of Object.values(this.sockets)) {
-			let player = socket.player;
-			// 唤醒预言家
-			if (player.id === id) {
-				if (player.dead) {
+		this.players.map(p => {
+			if (p.id === id) {
+				if (p.is_killed_tonight) {
+					throw new Error('他今晚被狼杀了，不能毒他');
+				}
+				if (p.is_dead) {
 					throw new Error('不能毒杀死人');
 				}
-				player.dead = true;
+				p.is_dead = true;
 			}
-		}
+		});
 	}
 };
 

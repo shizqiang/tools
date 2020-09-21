@@ -11,170 +11,241 @@ app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/index.html');
 });
 
-var sockets = {}, players = [], night = null;
+var sockets = [], players = [], night = null, started = false;
 
-function __players() {
-	let players = [];
-	for (let socket of Object.values(sockets)) {
-		players.push(socket.player);
+function check() {
+	let human = 0;
+	let wolf = 0;
+	sockets.map(s => {
+		if (s.player.identity === 'wolf' && !s.player.is_dead) {
+			wolf++;
+		}
+		if (s.player.identity !== 'wolf' && !s.player.is_dead) {
+			human++;
+		}
+		s.emit('light');
+		s.emit('players', players, s.player);
+	});
+	
+	if (wolf === 0) {
+		// 好人获胜
+		sockets.map(s => {
+			s.player.is_dead = false;
+			s.player.can_use_antidote = false;
+			s.player.can_use_poison = false;
+			s.emit('human-win');
+		});
+		started = false;
 	}
-	return players;
+	if (human === 0) {
+		// 狼人获胜
+		sockets.map(s => {
+			s.player.is_dead = false;
+			s.player.can_use_antidote = false;
+			s.player.can_use_poison = false;
+			s.emit('wolf-win');
+		});
+		started = false;
+	}
+	sockets.map(s => {
+		s.emit('players', players, s.player);
+	});
+}
+
+function light() {
+	sockets.map(s => {
+		s.player.votes = [];
+		s.player.attack_id = '';
+		if (s.player.is_killed_tonight) {
+			s.player.is_dead = true;
+		}
+		if (!s.player.is_dead) {
+			s.player.can_doubt = true;
+		}
+		s.player.is_killed_tonight = false;
+	});
+	check();
 }
 
 io.on('connection', (socket) => {
-	
-	// 玩家退出游戏
-	socket.on('disconnect', _ => {
-		if (!socket.player) {
-			return;
-		}
-		console.log(socket.player.name + ' -> 退出了游戏');
-		delete sockets[socket.player.id];
-		for (let id in sockets) {
-			if (id === socket.player.id) {
-				continue;
-			}
-			sockets[id].emit('leave', socket.player.id)
-		}
-	});
-	
-	socket.on('message', (msg) => {
-		for (let key in sockets) {
-			if (key === socket.client.id) {
-				continue;
-			}
-			sockets[key].send(msg)
-		}
-	});
-	
+
 	// 玩家取名加入游戏
 	socket.on('name', name => {
-		if (!name) {
-			socket.emit('rename');
-			return;
-		}
 		let player = new modle.Player(socket.client.id, name);
 		socket.player = player;
 		console.log(player.name + ' -> 加入了游戏');
-		// 初始化已加入的玩家
-		let players = [];
-		for (let id in sockets) {
-			players.push(sockets[id].player);
-		}
-		socket.emit('players', players);
 
 		// 将自己加入玩家
-		sockets[player.id] = socket;
-		for (let id in sockets) {
-			sockets[id].emit('join', socket.player);
-		}
-		
+		sockets.push(socket);
+		players.push(player);
+		sockets.map(s => {
+			s.emit('players', players, s.player);
+		});
+	});
+	
+	// 玩家退出游戏
+	socket.on('disconnect', _ => {
+		console.log(socket.player.name + ' -> 退出了游戏');
+		sockets = sockets.filter(s => {
+			return s.player.id !== socket.player.id;
+		})
+		players = players.filter(p => {
+			return p.id !== socket.player.id;
+		});
+		sockets.map(s => {
+			s.emit('players', players, s.player);
+		});
 	});
 	
 	// 玩家进入睡觉
 	socket.on('sleep', _ => {
-		if (socket.player.sleep) {
-			return;
-		}
 		socket.player.sleep = true;
-		socket.emit('sleeped');
-		console.log(socket.player.name + ' -> 进入睡眠');
 		let num = 0;
-		for (let id in sockets) {
-			if (!sockets[id].player.sleep) {
-				// 还有人没睡觉，不进入黑夜
-				return;
+		sockets.map(s => {
+			s.emit('players', players, s.player);
+			if (s.player.sleep) {
+				num++;
 			}
-			num++;
-		}
+		});
+		console.log(socket.player.name + ' -> 进入睡眠');
+		
 		let roles = ['wolf', 'wolf', 'prophet', 'witch', 'hunter', 'man', 'man', 'man'];
-		roles = ['wolf', 'witch', 'wolf'];
-		if (num < roles.length) {
+		roles = ['wolf', 'man', 'witch', 'prophet'];
+		if (!started && num < roles.length) {
 			console.log('人数不足，无法进入黑夜');
 			return;
 		}
-		roles.sort(function(a, b) {
-             return Math.random() - 0.5;
-        });
-        // 初始化所有的角色
-		for (let id in sockets) {
-			let player = sockets[id].player;
-			player.identity = roles.pop();
+		num = 0;
+		sockets.map(s => {
+			if (!s.player.sleep && !s.player.is_dead) {
+				num++;
+			}
+		});
+		if (!started) {
+			started = true; // 游戏开始
+			roles.sort(function(a, b) {
+				return Math.random() - 0.5;
+			});
+			// 初始化所有的角色
+			players.map(p => {
+				p.identity = roles.pop();
+				if (p.identity === 'prophet') {
+					p.can_check_identity = true;
+				}
+				if (p.identity === 'witch') {
+					p.has_antidote = true;
+					p.has_poison = true;
+				}
+				if (p.identity === 'wolf') {
+					p.can_attack = true;
+				}
+				if (p.identity === 'hunter') {
+					p.can_shot = true;
+				}
+			});
+			sockets.map(s => {
+				s.emit('players', players, s.player);
+			});
+			// 新的夜晚
+			console.log('游戏开始，进入黑夜');
+		} else {
+			if (num > 0) {
+				console.log('还有人没睡觉');
+				return;
+			}
+			players.map(p => {
+				if (p.identity === 'prophet') {
+					p.can_check_identity = !p.is_dead;
+				}
+				if (p.identity === 'wolf') {
+					p.can_attack =  !p.is_dead;
+				}
+				if (p.identity === 'hunter') {
+					p.can_shot =  !p.is_dead;
+				}
+			});
+			sockets.map(s => {
+				s.emit('players', players, s.player);
+			});
+			console.log('进入黑夜');
 		}
-
-		// 新的夜晚
-		console.log('游戏开始，进入黑夜');
-		night = new modle.Night(sockets);
-		night.wakeUpProphetAndWolf();
+		
+		night = new modle.Night(sockets, players);
+		sockets.map(s => {
+			// 唤醒预言家
+			if (s.player.identity === 'prophet') {
+				s.emit('prophet');
+				s.emit('players', players, s.player);
+			}
+			// 唤醒狼人
+			if (s.player.identity === 'wolf') {
+				s.emit('wolf');
+				s.emit('players', players, s.player);
+			}
+		});	
 	});
 	
 	// 预言家查看身份
-	socket.on('identity', _id => {
-		if (socket.player.identity !== 'prophet' || socket.player.dead) {
-			return;
-		}
-		for (let id in sockets) {
-			if (sockets[id].player.id === _id) {
-				if (night.prophet === _id || night.prophet === null) {
-					night.prophet = _id;
-					if (sockets[id].player.identity === 'wolf') {
-						socket.emit('identity', '狼人');
-					} else {
-						socket.emit('identity', '好人');
-					}
+	socket.on('identity', id => {
+		players.map(p => {
+			if (p.id === id) {
+				if (p.identity === 'wolf') {
+					socket.emit('identity', '狼人');
 				} else {
-					socket.emit('identity', '只能检查一个人');
+					socket.emit('identity', '好人');
 				}
+				socket.player.can_check_identity = false;
+				socket.emit('players', false, socket.player);	
 			} 
-		}
+		});
 	});
 
 	// 狼人袭击
 	socket.on('attack', id => {
-		if (socket.player.identity !== 'wolf' || socket.player.dead || night.attacked) {
-			return;
-		}
-		let players = [], wolfs = [], witch = null, hunter = null, attacked = '';
-		for (let s of Object.values(sockets)) {
+		let attacked = '', lastAttacked = '';
+		sockets.map(s => {
 			// 去掉已经选择的袭击对象
-			if (s.player.id == socket.player.attack) {
+			if (s.player.id == socket.player.attack_id) {
+				lastAttacked = socket.player.attack_id;
 				s.player.votes = s.player.votes.filter(item => {
 					return item.id != socket.player.id
 				});
 			}
+		});
+		sockets.map(s => {
 			if (s.player.id == id) {
-				s.player.votes.push({id: socket.player.id, name: socket.player.name});
+				if (s.player.is_dead) {
+					socket.emit('message', '他已经死了');	
+					socket.player.attack_id = lastAttacked;
+				} else {
+					s.player.votes.push({id: socket.player.id, name: socket.player.name});
+					socket.player.attack_id = id;
+				}
+				
 			}
-			players.push(s.player);
+		});
+
+		sockets.map(s => {
 			if (s.player.identity === 'wolf') {
-				wolfs.push(s);
+				s.emit('players', players, false);
 			}
-			if (s.player.identity === 'witch' && !s.player.dead) {
-				witch = s;
-			}
-			if (s.player.identity === 'hunter' && !s.player.dead) {
-				hunter = s;
-			}
-		}
-		
-		socket.player.attack = id;
-		// 通知所有的狼人袭击对象
-		wolfs.map(wolf => {
-			wolf.emit('attack', players);
 		});
 		
 		// 狼人是否都袭击结束
-		let ready = true, _attack = '';
-		wolfs.map(wolf => {
-			if (wolf.player.attack === null) {
-				// 有狼人未选择
-				ready = false;
-			} else if (wolf.player.attack != '-') { // 狼人不杀人
-				if (_attack === '') {
-					_attack = wolf.player.attack;
-				} else {
-					if (wolf.player.attack !== _attack) {
-						ready = false;
+		let ready = true;
+		sockets.map(s => {
+			if (s.player.identity === 'wolf' && !s.player.is_dead) {
+				if (s.player.attack_id === '') {
+					// 有狼人未选择
+					ready = false;
+				} else { // 狼人不杀人
+					if (attacked === '') {
+						attacked = s.player.attack_id;
+					} else {
+						if (s.player.attack_id !== attacked) {
+							// 选择不一致
+							ready = false;
+						}
 					}
 				}
 			}
@@ -182,68 +253,140 @@ io.on('connection', (socket) => {
 		if (!ready) {
 			return;
 		}
-		attacked = _attack;
+		sockets.map(s => {
+			if (s.player.identity === 'wolf') {
+				s.player.can_attack = false;
+				s.emit('players', false, s.player);
+			}
+		});
 
 		// 夜晚死亡的玩家
 		players.map(player => {
 			if (player.id === attacked) {
-				player.dead = true;
-				night.attacked = attacked;
+				player.is_killed_tonight = true;
 			}
 		});
 
-		if (witch) {
-			witch.player.antidote_ = false;
-			witch.emit('witch');
-			witch.emit('players', players, witch.player);
-		} else if (hunter) {
-			hunter.emit('hunter');
-		}
+		sockets.map(s => {
+			if (s.player.identity === 'witch') {
+				s.player.can_use_antidote = true;
+				s.player.can_use_poison = false;
+				if (!s.player.has_antidote) {
+					s.player.can_use_antidote = false;
+					s.player.can_use_poison = true;
+				}
+				if (!s.player.has_poison) {
+					s.player.can_use_poison = false;
+				}
+				s.emit('witch');
+				s.emit('players', players, s.player);
+			}
+		});
 	});
 
 	// 女巫使用灵药
 	socket.on('antidote', Yes => {
-		if (socket.player.dead && night.attacked !== socket.player.id) {
-			return;
-		}
-		if (socket.player.identity !== 'witch' || !socket.player.antidote) {
-			return;
-		}
-		if (night.antidote) {
-			return;
-		}
-		night.antidote = true; // 已使用灵药
+		socket.player.can_use_antidote = false;
+		socket.player.can_use_poison = true;
 		if (Yes === 1) {
-			socket.player.antidote = false; // 灵药标记为已使用
+			socket.player.can_use_poison = false;
+			socket.player.has_antidote = false; // 灵药标记为已使用
 			// 救活被袭击的人
 			night.save();
 		}
-		socket.player.antidote_ = true;
-		socket.emit('players', __players(), socket.player);
+		if (!socket.player.has_poison) {
+			socket.player.can_use_poison = false;
+		}
+		socket.emit('players', false, socket.player);
+		if (!socket.player.can_use_poison) {
+			// 天亮
+			light();
+		}
 	});
 
 	// 女巫使用毒药
 	socket.on('poison', id => {
-		if (socket.player.dead && night.attacked !== socket.player.id) {
-			return;
-		}
-		if (socket.player.identity !== 'witch' || !socket.player.poison) {
-			return;
-		}
-		if (!night.antidote) { // 还没有使用灵药
-			return;
-		}
-		if (night.poison) { // 已经使用过毒药
-			return;
-		}
 		try {
-			night.kill(id);
-			socket.player.poison = false; // 毒药标记为已使用
-			socket.emit('players', __players(), socket.player);
+			if (id) {
+				night.kill(id);
+				socket.player.has_poison = false;
+			}
+			socket.player.can_use_poison = false;
+			light();
 		} catch (e) {
 			socket.emit('message', e.message);
 		}
-		
+	});
+
+	socket.on('witch_is_dead', _ => {
+		light();
+	});
+
+	socket.on('ticket', id => {
+		console.log(socket.player.name + " -> " + id);
+		let lastDoubtId = '';
+		sockets.map(s => {
+			// 去掉已经选择的袭击对象
+			if (s.player.id == socket.player.doubt_id) {
+				lastDoubtId = socket.player.doubt_id;
+				s.player.tickets = s.player.tickets.filter(item => {
+					return item.id != socket.player.id
+				});
+			}
+		});
+		sockets.map(s => {
+			if (s.player.id == id) {
+				if (s.player.is_dead) {
+					socket.emit('message', '他已经死了');	
+					socket.player.doubt_id = lastDoubtId;
+				} else {
+					s.player.tickets.push({id: socket.player.id, name: socket.player.name});
+					socket.player.doubt_id = id;
+				}
+			}
+		});
+
+		// 是否投票结束
+		let ready = true;
+		sockets.map(s => {
+			if (!s.player.is_dead) {
+				if (s.player.doubt_id === '') {
+					// 有人未投票
+					console.log('有人未投票')
+					ready = false;
+				}
+			}
+		});
+		sockets.map(s => {
+			s.emit('players', players, false);
+		});
+		if (!ready) {
+			return;
+		}
+		let max = null;
+		sockets.map(s => {
+			if (max == null) {
+				max = s;
+			} else if (s.player.tickets.length > max.player.tickets.length) {
+				max = s;
+			} else if (s.player.tickets.length > 0) {
+				ready = false;
+			}
+		});
+		// 平票
+		if (!ready) {
+			return;
+		}
+		max.player.is_dead = true;
+		sockets.map(s => {
+			s.player.can_doubt = false;
+			s.player.sleep = false;
+			s.player.tickets = [];
+		});
+		sockets.map(s => {
+			s.emit('players', players, s.player);
+		});
+		check();
 	});
 });
 

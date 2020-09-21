@@ -2,10 +2,9 @@ var app = new Vue({
     el: '#app',
     data: {
         name: 'kill wolf',
+        night: false,
         players: [],
         player: {},
-        sleeped: false,
-        identity: '',
     },
     computed: {
     },
@@ -20,14 +19,44 @@ var app = new Vue({
         
         // 预言家选择查看身份，狼人选择袭击目标
         select: function(id) {
-            if (app.identity === 'prophet') {
-                socket.emit('identity', id);
+            if (this.player.is_dead) {
+                alert('你已死亡');
+                return;
             }
-        	if (app.identity === 'wolf') {
-                socket.emit('attack', id);
-            }
-            if (app.identity === 'witch') {
-                socket.emit('poison', id);
+            if (this.player.identity === 'prophet') {
+                if (this.night) {
+                    if (this.player.can_check_identity) {
+                        socket.emit('identity', id);
+                    }
+                } else {
+                    if (this.player.can_doubt) {
+                        socket.emit('ticket', id);
+                    }
+                }
+            } else if (this.player.identity === 'wolf') {
+                if (this.night) {
+                    if (this.player.can_attack) {
+                        socket.emit('attack', id);
+                    }
+                } else {
+                    if (this.player.can_doubt) {
+                        socket.emit('ticket', id);
+                    }
+                }
+            } else if (this.player.identity === 'witch') {
+                if (this.night) {
+                    if (this.player.can_use_poison) {
+                        socket.emit('poison', id);
+                    }
+                } else {
+                    if (this.player.can_doubt) {
+                        socket.emit('ticket', id);
+                    }
+                }
+            } else {
+                if (this.player.can_doubt) {
+                    socket.emit('ticket', id);
+                }
             }
         },
         
@@ -41,15 +70,6 @@ var app = new Vue({
             socket.emit('antidote', Yes);
         },
         
-        // 女巫使用毒药
-        poison: function() {
-        	
-        },
-        
-        // 猎人枪杀
-        shot: function() {
-        	
-        },
         
     }
 });

@@ -5,24 +5,36 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta name="format-detection" content="telephone=no"/>
-    <title>狼人杀</title>
+    <title>Wolf</title>
     <style type="text/css">
     	p {
     		background-color: white;
     	}
+		* {
+			transition: all 2s;
+		}
     </style>
 </head>
 <body>
 <div id="app">
-	<p v-for="player in players" @click="select(player.id)">
-		<span v-if="identity == 'wolf' && player.identity == 'wolf'">🐺</span>
-		{{player.name}}
-		<span v-if="identity == 'wolf'" v-for="vote in player.votes">- {{vote.name}}🗡</span>
-		<span v-if="player.dead"> - ☠️</span>
+	<p v-for="p in players" @click="select(p.id)">
+		<span v-if="p.identity == 'wolf' && player.identity == 'wolf'">🐺</span>
+		<span v-else-if="player.id == p.id && p.identity == 'witch'">🧙‍♀️</span>
+		<span v-else-if="player.id == p.id && p.identity == 'prophet'">🧙‍</span>
+		<span v-else-if="player.id == p.id && p.identity == 'hunter'">🔫</span>
+		<span v-else-if="player.id == p.id">👼</span>
+		<span v-else>🧔</span>
+		<span v-if="p.sleep">🛌</span>
+		{{p.name}}
+		<span v-if="player.identity == 'wolf'" v-for="vote in p.votes">- {{vote.name}}🗡</span>
+		<span v-for="t in p.tickets">- 🗡</span>
+		<span v-if="p.is_dead"> - ☠️</span>
+		<span v-if="player.identity == 'witch' && p.is_killed_tonight"> - 🗡</span>
 	</p>
-	<a href="javascript:;" v-if="!sleeped" @click="sleep">睡觉</a>
-	<a href="javascript:;" v-if="identity == 'witch' && !player.antidote_" @click="antidote(1)">救他</a>
-	<a href="javascript:;" v-if="identity == 'witch' && !player.antidote_" @click="antidote(0)">不救</a>
+	<a href="javascript:;" v-if="!player.sleep && !player.is_dead" @click="sleep">睡觉</a>
+	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_antidote && !player.is_dead" @click="antidote(1)">救他</a>
+	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_antidote && !player.is_dead" @click="antidote(0)">不救</a>
+	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_poison && !player.is_dead" @click="select(0)">不毒</a>
 </div>
 <script src="/vue-axios-wx.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
@@ -30,19 +42,12 @@
 <script>
 var socket = io();
 socket.on('connect', _ => {
-	app.names = [];
-	app.sleeped = false;
 	document.body.style.background = '#fff';
 	setTimeout(_ => {
 		var name = prompt('你的名字:');
-		socket.emit('name', name);
-	}, 200);
-});
-
-//名字无效
-socket.on('rename', _ => {
-	setTimeout(_ => {
-		var name = prompt('你的名字:');
+		while (!name) {
+			name = prompt('你的名字:');
+		}
 		socket.emit('name', name);
 	}, 200);
 });
@@ -54,50 +59,45 @@ socket.on('message', message => {
 
 // 初始化玩家
 socket.on('players', (players, player) => {
-	app.players = players;
-	app.player = player;
-});
-
-// 玩家加入
-socket.on('join', player => {
-	app.players.push(player)
-});
-
-//玩家退出
-socket.on('leave', playerId => {
-	app.players = app.players.filter(item => {
-		return item.id != playerId;
-	})
+	if (players) {
+		app.players = players;
+	}
+	if (player) {
+		app.player = player;
+	}
 });
 
 // 预言家被唤醒
 socket.on('prophet', _ => {
 	setTimeout(_ => {
 		document.body.style.background = '#006';
-		app.identity = 'prophet';
 	}, 2000);
 });
 
+socket.on('identity', message => {
+	app.player.can_identity = false;
+	alert(message);
+});
+
 // 狼人被唤醒
-socket.on('wolf', players => {
+socket.on('wolf', _ => {
 	setTimeout(_ => {
 		document.body.style.background = '#900';
-		app.identity = 'wolf';
-		app.players = players;
 	}, 2000);
 });
 
 // 女巫被唤醒
-socket.on('witch', players => {
+socket.on('witch', _ => {
 	document.body.style.background = '#090';
-	app.identity = 'witch';
+	if (app.player.is_dead) {
+		setTimeout(_ => {
+			socket.emit('witch_is_dead');
+		}, 2000);
+	}
 });
 
 socket.on('hunter', _ => {
-	setTimeout(_ => {
-		document.body.style.background = '#990';
-		app.identity = 'hunter';
-	}, 2000);
+	document.body.style.background = '#990';
 });
 
 // 狼人袭击目标
@@ -106,25 +106,26 @@ socket.on('attack', players => {
 });
 
 //进入黑夜
-socket.on('sleep', _ => {
+socket.on('night', _ => {
+	app.night = true;
 	document.body.style.background = '#000';
-});
-
-//成功进入睡眠
-socket.on('sleeped', _ => {
-	app.sleeped = true;
 });
 
 // 天亮了
 socket.on('light', _ => {
+	app.night = false;
 	document.body.style.background = '#FFF';
 });
 
-//天亮了
-socket.on('identity', res => {
-	alert(res)
+socket.on('wolf-win', _ => {
+	app.player.is_dead = false;
+	alert('狼人胜利');
 });
 
+socket.on('human-win', _ => {
+	app.player.is_dead = false;
+	alert('好人胜利');
+});
 </script>
 </body>
 </html>
