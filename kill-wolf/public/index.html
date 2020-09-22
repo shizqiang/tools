@@ -38,8 +38,9 @@
 		<span v-if="p.is_dead"> - ☠️</span>
 		<span v-if="player.identity == 'witch' && p.is_killed_tonight"> - 🗡</span>
 	</p>
-	<p v-if="!player.id"><input v-model="player.name" placeholder="你的名字" /></br>
-	</br> <button @click="setName()">进入房间</button></p>
+	<p v-if="!player.id"><input v-model="player.name" placeholder="你的名字" />
+	<br>
+	<br> <button @click="setName()">进入房间</button></p>
 	<a href="javascript:;" v-if="!player.sleep && !player.is_dead" @click="sleep">睡觉</a>
 	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_antidote && !player.is_dead" @click="antidote(1)">救他</a>
 	<a href="javascript:;" v-if="player.identity == 'witch' && player.can_use_antidote && !player.is_dead" @click="antidote(0)">不救</a>
