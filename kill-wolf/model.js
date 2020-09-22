@@ -46,15 +46,13 @@ Night.prototype = {
 
 	// 女巫下毒
 	kill: function(id) {
-		this.players.map(p => {
-			if (p.id === id) {
-				if (p.is_killed_tonight) {
-					throw new Error('他今晚被狼杀了，不能毒他');
-				}
-				if (p.is_dead) {
+		this.sockets.map(s => {
+			if (s.player.id === id) {
+				if (s.is_dead) {
 					throw new Error('不能毒杀死人');
 				}
-				p.is_dead = true;
+				s.emit('message', '你昨晚死亡'); 
+				s.player.is_dead = true;
 			}
 		});
 	}

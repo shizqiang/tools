@@ -3,7 +3,7 @@ const app = express();
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
 var path = require('path');
-var modle = require('./model');
+var model = require('./model');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -13,7 +13,23 @@ app.get('/', (req, res) => {
 
 let roles = ['wolf', 'wolf', 'prophet', 'witch', 'hunter', 'man', 'man', 'man'];
 roles = ['wolf', 'wolf', 'witch', 'prophet', 'man', 'man'];
-var sockets = [], players = [], night = null, started = false;
+var sockets = [], players = [], night = null, started = false, name = [], poison = false;
+
+function gameOver(winner) {
+	sockets.map(s => {
+		let id = s.player.id;
+		let name = s.player.name;
+		s.player = new model.Player(id, name);
+		s.emit(winner);
+	});
+	started = false;
+}
+
+function broadCast() {
+	sockets.map(s => {
+		s.emit('players', players, s.player);
+	});
+}
 
 function check() {
 	let human = 0;
@@ -31,37 +47,15 @@ function check() {
 	
 	if (wolf === 0) {
 		// 好人获胜
-		sockets.map(s => {
-			s.player.is_dead = false;
-			s.player.can_use_antidote = false;
-			s.player.can_use_poison = false;
-			s.player.sleep = false;
-			s.player.can_doubt = false;
-			s.player.tickets = [];
-			s.player.doubt_id = '';
-			s.emit('human-win');
-		});
-		started = false;
+		gameOver('human-win');
 		console.log('游戏结束，好人胜利');
 	}
 	if (human === 0 || (human === 1 && wolf === 1)) {
 		// 狼人获胜
-		sockets.map(s => {
-			s.player.is_dead = false;
-			s.player.can_use_antidote = false;
-			s.player.can_use_poison = false;
-			s.player.sleep = false;
-			s.player.can_doubt = false;
-			s.player.tickets = [];
-			s.player.doubt_id = '';
-			s.emit('wolf-win');
-		});
-		started = false;
+		gameOver('wolf-win');
 		console.log('游戏结束，狼人胜利');
 	}
-	sockets.map(s => {
-		s.emit('players', players, s.player);
-	});
+	broadCast();
 }
 
 function light() {
@@ -70,12 +64,25 @@ function light() {
 		s.player.tickets = [];
 		s.player.attack_id = '';
 		if (s.player.is_killed_tonight) {
+			name.push(s.player.name);
+			s.emit('message', '你昨晚死亡'); 
 			s.player.is_dead = true;
+		} 
+		if (s.player.id === poison) {
+			name.push(s.player.name);
 		}
+		
+		s.player.is_killed_tonight = false;
+	});
+	sockets.map(s => {
 		if (!s.player.is_dead) {
+			if (name.length > 0) {
+				s.emit('message', name.join() + ' -> 昨晚死亡'); 
+			} else {
+				s.emit('message', '昨晚是平安夜'); 
+			}
 			s.player.can_doubt = true;
 		}
-		s.player.is_killed_tonight = false;
 	});
 	check();
 }
@@ -88,7 +95,7 @@ io.on('connection', (socket) => {
 
 	// 玩家取名加入游戏
 	socket.on('name', name => {
-		let player = new modle.Player(socket.client.id, name);
+		let player = new model.Player(socket.client.id, name);
 		socket.player = player;
 		if (started) {
 			socket.emit('message', '游戏进行中，不能加入');
@@ -103,9 +110,7 @@ io.on('connection', (socket) => {
 		// 将自己加入玩家
 		sockets.push(socket);
 		players.push(player);
-		sockets.map(s => {
-			s.emit('players', players, s.player);
-		});
+		broadCast();
 	});
 	
 	// 玩家退出游戏
@@ -120,9 +125,7 @@ io.on('connection', (socket) => {
 		players = players.filter(p => {
 			return p.id !== socket.player.id;
 		});
-		sockets.map(s => {
-			s.emit('players', players, s.player);
-		});
+		broadCast();
 		if (started) {
 			check();
 		}
@@ -172,9 +175,8 @@ io.on('connection', (socket) => {
 				}
 			});
 			roles = _roles;
-			sockets.map(s => {
-				s.emit('players', players, s.player);
-			});
+			name = [];
+			broadCast();
 			// 新的夜晚
 			console.log('游戏开始，进入黑夜');
 		} else {
@@ -196,13 +198,12 @@ io.on('connection', (socket) => {
 					p.can_shot =  !p.is_dead;
 				}
 			});
-			sockets.map(s => {
-				s.emit('players', players, s.player);
-			});
+			broadCast();
+			name = [];
 			console.log('再次进入黑夜');
 		}
 		
-		night = new modle.Night(sockets, players);
+		night = new model.Night(sockets, players);
 		sockets.map(s => {
 			// 唤醒预言家
 			if (s.player.identity === 'prophet') {
@@ -296,6 +297,8 @@ io.on('connection', (socket) => {
 		players.map(player => {
 			if (player.id === attacked) {
 				player.is_killed_tonight = true;
+			} else {
+				player.is_killed_tonight = false;
 			}
 		});
 
@@ -342,6 +345,7 @@ io.on('connection', (socket) => {
 			if (id) {
 				night.kill(id);
 				socket.player.has_poison = false;
+				poison = id;
 			}
 			socket.player.can_use_poison = false;
 			light();
@@ -409,14 +413,17 @@ io.on('connection', (socket) => {
 		}
 		max.player.is_dead = true;
 		sockets.map(s => {
+			if (s.player.id === max.player.id) {
+				s.emit('message', '你被投票处决，请留遗言');
+			} else {
+				s.emit('message', max.player.name + ' -> 被投票处决，他有遗言'); 
+			}
 			s.player.can_doubt = false;
 			s.player.sleep = false;
 			s.player.tickets = [];
 			s.player.doubt_id = '';
 		});
-		sockets.map(s => {
-			s.emit('players', players, s.player);
-		});
+		broadCast();
 		check();
 	});
 });

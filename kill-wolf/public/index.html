@@ -10,6 +10,14 @@
     	p {
     		background-color: white;
     	}
+    	p span {
+    		display: inline-block;
+    		width: 20px;
+    		text-align: center;
+    	}
+    	p span.name {
+    		width: 60px;
+    	}
 		* {
 			transition: all 2s;
 		}
@@ -24,19 +32,19 @@
 <div id="app">
 	<script src="/vue-axios-wx.min.js"></script>
 	<p v-for="p in players" @click="select(p.id)">
-		<span v-if="player.id == p.id && player.identity == 'wolf'">*</span>
-		<span v-if="p.identity == 'wolf' && player.identity == 'wolf'">🐺</span>
+		<span v-if="player.id == p.id && player.identity == 'wolf'">🐺</span>
+		<span v-else-if="p.identity == 'wolf' && player.identity == 'wolf'">🐺</span>
 		<span v-else-if="player.id == p.id && p.identity == 'witch'">🧙‍♀️</span>
 		<span v-else-if="player.id == p.id && p.identity == 'prophet'">🕵️‍♂️️</span>
 		<span v-else-if="player.id == p.id && p.identity == 'hunter'">🔫</span>
 		<span v-else-if="player.id == p.id">😁</span>
 		<span v-else>❓</span>
+		<span class="name">{{p.name}}</span>
 		<span v-if="p.sleep && !p.can_doubt && !p.is_dead">🛌</span>
-		{{p.name}}
-		<span v-if="player.identity == 'wolf'" v-for="vote in p.votes">- {{vote.name}}🗡</span>
-		<span v-for="t in p.tickets">- 🗡</span>
-		<span v-if="p.is_dead"> - ☠️</span>
-		<span v-if="player.identity == 'witch' && p.is_killed_tonight"> - 🗡</span>
+		<span v-if="player.identity == 'wolf'" v-for="vote in p.votes">🗡</span>
+		<span v-for="t in p.tickets">🗡</span>
+		<span v-if="p.is_dead">☠️</span>
+		<span v-if="player.identity == 'witch' && player.can_use_antidote && p.is_killed_tonight">🗡</span>
 	</p>
 	<p v-if="!player.id"><input v-model="player.name" placeholder="你的名字" />
 	<br>
