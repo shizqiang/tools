@@ -30,7 +30,7 @@
 </head>
 <body>
 <div id="app">
-	<script src="/vue-axios-wx.min.js"></script>
+	<script src="/vue.js"></script>
 	<p v-for="p in players" @click="select(p.id)">
 		<span v-if="player.id == p.id && player.identity == 'wolf'">🐺</span>
 		<span v-else-if="p.identity == 'wolf' && player.identity == 'wolf'">🐺</span>
@@ -95,7 +95,7 @@ socket.on('wolf', _ => {
 // 女巫被唤醒
 socket.on('witch', _ => {
 	document.body.style.background = '#090';
-	if (app.player.is_dead) {
+	if (app.player.is_dead || (!app.player.can_use_poison && !app.player.can_use_antidote)) {
 		setTimeout(_ => {
 			socket.emit('witch_is_dead');
 		}, 2000);

@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
 });
 
 let roles = ['wolf', 'wolf', 'prophet', 'witch', 'hunter', 'man', 'man', 'man'];
-roles = ['wolf', 'wolf', 'witch', 'prophet', 'man', 'man'];
+roles = ['wolf', 'witch', 'man', 'prophet'];
 var sockets = [], players = [], night = null, started = false, name = [], poison = false;
 
 function gameOver(winner) {
