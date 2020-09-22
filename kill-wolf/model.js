@@ -1,16 +1,16 @@
 var Player = function(id, name) {
 	this.id = id;
 	this.name = name;
-	this.is_killed_tonight = false; // 是否今晚狼被杀
+	this.is_killed_tonight = false; // 是否今晚被狼杀
 	this.is_dead = false; // 是否死亡
 	this.is_police = false; // 是否是警长
 	this.identity = ''; // 身份
-	this.can_check_identity = false; // 预言家可查看身份
-	this.votes = []; // 被投票的人
+	this.can_check_identity = false; // 预言家是否可查看别人身份 
+	this.votes = []; // 被袭击的狼人列表
 	this.doubt_id = ''; // 票谁
-	this.can_doubt = false; // 可以投票
-	this.tickets = [];
-	this.can_attack = false;
+	this.can_doubt = false; // 是否可以投票
+	this.tickets = []; // 被投票的玩家列表 
+	this.can_attack = false; // 狼人是否可以袭击玩家
 	this.attack_id = ''; // 狼人袭击的人
 
 	this.sleep = false; // 玩家是否睡着
@@ -23,10 +23,6 @@ var Player = function(id, name) {
 	this.can_shot = false; // 猎人可以开枪
 
 	this.last_words = false; // 是否可以有遗言
-};
-
-var Day = function() {
-
 };
 
 var Night = function(sockets, players) {
@@ -66,6 +62,5 @@ Night.prototype = {
 
 module.exports = {
 	Player: Player,
-	Day: Day,
 	Night: Night
 };

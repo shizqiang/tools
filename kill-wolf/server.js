@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
 });
 
 let roles = ['wolf', 'wolf', 'prophet', 'witch', 'hunter', 'man', 'man', 'man'];
-roles = ['wolf', 'wolf', 'witch', 'prophet'];
+roles = ['wolf', 'wolf', 'witch', 'prophet', 'man', 'man'];
 var sockets = [], players = [], night = null, started = false;
 
 function check() {
@@ -37,6 +37,8 @@ function check() {
 			s.player.can_use_poison = false;
 			s.player.sleep = false;
 			s.player.can_doubt = false;
+			s.player.tickets = [];
+			s.player.doubt_id = '';
 			s.emit('human-win');
 		});
 		started = false;
@@ -50,6 +52,8 @@ function check() {
 			s.player.can_use_poison = false;
 			s.player.sleep = false;
 			s.player.can_doubt = false;
+			s.player.tickets = [];
+			s.player.doubt_id = '';
 			s.emit('wolf-win');
 		});
 		started = false;
@@ -79,6 +83,7 @@ function light() {
 io.on('connection', (socket) => {
 	
 	socket.on('heart', _ => {
+		// 客户端心跳，不做任何业务处理
 	});
 
 	// 玩家取名加入游戏
@@ -129,6 +134,7 @@ io.on('connection', (socket) => {
 			return;
 		}
 		socket.player.sleep = true;
+		console.log(socket.player.name + ' -> 进入睡眠');
 		let num = 0;
 		sockets.map(s => {
 			s.emit('players', players, s.player);
@@ -136,18 +142,11 @@ io.on('connection', (socket) => {
 				num++;
 			}
 		});
-		console.log(socket.player.name + ' -> 进入睡眠');
-		console.log('当前睡眠人数' + num, roles.length);
 		if (!started && num < roles.length) {
 			console.log('人数不足，无法进入黑夜');
 			return;
 		}
-		num = 0;
-		sockets.map(s => {
-			if (!s.player.sleep && !s.player.is_dead) {
-				num++;
-			}
-		});
+		
 		if (!started) {
 			started = true; // 游戏开始
 			roles.sort(function(a, b) {
@@ -179,12 +178,14 @@ io.on('connection', (socket) => {
 			// 新的夜晚
 			console.log('游戏开始，进入黑夜');
 		} else {
-			if (num > 0) {
-				console.log('还有人没睡觉');
+			let allSleep = players.every(p => {
+				return p.sleep || p.is_dead;
+			});
+			if (!allSleep) {
+				console.log('还有玩家没有睡觉');
 				return;
 			}
 			players.map(p => {
-				
 				if (p.identity === 'prophet') {
 					p.can_check_identity = !p.is_dead;
 				}
@@ -198,7 +199,7 @@ io.on('connection', (socket) => {
 			sockets.map(s => {
 				s.emit('players', players, s.player);
 			});
-			console.log('进入黑夜');
+			console.log('再次进入黑夜');
 		}
 		
 		night = new modle.Night(sockets, players);
@@ -377,15 +378,8 @@ io.on('connection', (socket) => {
 		});
 
 		// 是否投票结束
-		let ready = true;
-		sockets.map(s => {
-			if (!s.player.is_dead) {
-				if (s.player.doubt_id === '') {
-					// 有人未投票
-					console.log('还有人未投票')
-					ready = false;
-				}
-			}
+		let ready = players.every(p => {
+			return p.is_dead || p.doubt_id !== '';
 		});
 		sockets.map(s => {
 			s.emit('players', players, false);
@@ -399,7 +393,9 @@ io.on('connection', (socket) => {
 				return;
 			}
 			if (max == null) {
-				max = s;
+				if (s.player.tickets.length > 0) {
+					max = s;
+				}
 			} else if (s.player.tickets.length > max.player.tickets.length) {
 				max = s;
 			} else if (s.player.tickets.length == max.player.tickets.length) {
@@ -416,6 +412,7 @@ io.on('connection', (socket) => {
 			s.player.can_doubt = false;
 			s.player.sleep = false;
 			s.player.tickets = [];
+			s.player.doubt_id = '';
 		});
 		sockets.map(s => {
 			s.emit('players', players, s.player);
