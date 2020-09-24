@@ -16,7 +16,7 @@
     		text-align: center;
     	}
     	p span.name {
-    		width: 60px;
+    		width: 120px;
     	}
 		* {
 			transition: all 2s;
@@ -62,10 +62,17 @@
 <script>
 var socket = io();
 socket.on('connect', _ => {
+	app.message = '';
 	document.body.style.background = '#fff';
-	/* setInterval(_ => {
-		socket.emit('heart');
-	}, 10000); */
+	setTimeout(_ => {
+		if (app.disconnected) {
+			app.setName();
+		}
+	}, 200);
+});
+
+socket.on('disconnect', _ => {
+	app.disconnected = true;
 });
 
 // 收到消息

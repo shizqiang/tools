@@ -74,6 +74,8 @@ socket.on('message', message => {
 
 // 初始化玩家
 socket.on('players', (players, player) => {
+	console.log(player);
+	player.log();
 	if (players) {
 		app.players = players;
 	}
@@ -132,6 +134,7 @@ socket.on('human-win', _ => {
 	app.player.is_dead = false;
 	app.message = '好人胜利'
 });
+
 </script>
 </body>
 </html>

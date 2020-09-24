@@ -23,7 +23,17 @@ var Player = function(id, name) {
 	this.can_shot = false; // 猎人可以开枪
 
 	this.last_words = false; // 是否可以有遗言
+	
 };
+
+Player.prototype = {
+	test2: function() {
+		console.log('test2');
+	}	
+};
+
+
+
 
 var Night = function(sockets, players) {
 	this.sockets = sockets;

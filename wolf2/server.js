@@ -3,16 +3,20 @@ const app = express();
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
 var path = require('path');
-const action = require('./action');
 const Player = require('./player'); 
 
 app.use(express.static(path.join(__dirname, './')));
 
-var identities = ['wolf', 'prophet', 'witch', 'hunter', 'man'];
-identities = ['wolf', 'wolf'];
-var sockets = [], players = [];
+var sockets = [];
+var players = [];
+var dead = []; // 定义昨夜死亡的玩家
+var day = 0;
 var started = false;
+var identities = ['wolf', 'prophet', 'witch', 'hunter', 'man'];
 
+identities = ['wolf', 'prophet', 'witch'];
+
+// 返回一个随机的身份分配
 function random() {
 	identities.sort(function(a, b) {
 		return Math.random() - 0.5;
@@ -25,16 +29,17 @@ function game_over(winner) {
 	sockets.forEach(s => {
 		let id = s.player.id;
 		let name = s.player.name;
-		s.player = new model.Player(id, name);
+		s.player = new Player(id, name);
 		s.emit(winner);
 	});
 	started = false;
+	day = 0;
 }
 
+// 检查游戏是否结束
 function check_game_over() {
-	let human = 0;
-	let wolf = 0;
-	let god = 0;
+	// 剩余的身份人数
+	let human = 0, wolf = 0, god = 0;
 	sockets.forEach(s => {
 		if (s.player.identity === 'wolf' && !s.player.is_dead) {
 			wolf++;
@@ -45,8 +50,7 @@ function check_game_over() {
 		if (s.player.identity !== 'man' && s.player.identity !== 'wolf' && !s.player.is_dead) {
 			god++;
 		}
-		s.emit('light');
-		s.emit('players', players, s.player);
+		
 	});
 	
 	if (human === 0 || god === 0 || (human === 1 && wolf === 1)) {
@@ -66,29 +70,52 @@ function light() {
 		s.player.tickets = [];
 		s.player.attack_id = '';
 		if (s.player.is_killed_tonight) {
-			s.emit('message', '你昨晚死亡'); 
+			if (day === 1) {
+				s.emit('message', '你昨晚死亡，请留遗言'); 
+			} else {
+				s.emit('message', '你昨晚死亡，没有遗言'); 
+			}
 			s.player.is_dead = true;
 			s.player.is_killed_tonight = false;
+			dead.push(s.player.name);
 		} 
-		if (s.player.id === poison) {
+		if (s.player.is_poison_tonight) {
 			// 被女巫毒死
+			if (day === 1) {
+				s.emit('message', '你昨晚死亡，请留遗言'); 
+			} else {
+				s.emit('message', '你昨晚死亡，没有遗言'); 
+			}
+			if (s.player.identity === 'hunter') {
+				// 被女巫毒死，不能开枪
+				s.player.can_shot = false;
+			}
+			s.player.is_dead = true;
+			s.player.is_poison_tonight = false;
+			dead.push(s.player.name);
 		}
 	});
 	sockets.forEach(s => {
 		if (!s.player.is_dead) {
-			if (name.length > 0) {
-				s.emit('message', name.join() + ' -> 昨晚死亡'); 
+			if (dead.length > 0) {
+				s.emit('message', dead.join() + ' -> 昨晚死亡'); 
 			} else {
 				s.emit('message', '昨晚是平安夜'); 
 			}
 			s.player.can_doubt = true;
 		}
 	});
+	sockets.forEach(s => {
+		s.emit('light');
+		s.emit('players', players, s.player);
+	})
 	check_game_over();
 }
 
-
+// 天黑了
 function night() {
+	day++;
+	console.log('现在是第' + day + '个夜晚');
 	if (started) {
 		players.forEach(p => {
 			if (p.identity === 'wolf') {
@@ -99,8 +126,9 @@ function night() {
 			}
 		});
 	} else {
+		started = true;
+		console.log('游戏开始');
 		let identities = random();
-		console.log(identities);
 		players.forEach(p => {
 			p.identity = identities.pop();
 			if (p.identity === 'wolf') {
@@ -120,14 +148,11 @@ function night() {
 			}
 		});
 	}
+	console.log('进入黑夜');
 }
 
 
-io.on('connection', (socket) => {
-	
-	socket.on('heart', _ => {
-		// 客户端心跳，不做任何业务处理
-	});
+io.on('connection', socket => {
 
 	// 玩家取名加入游戏
 	socket.on('name', (id, name) => {
@@ -156,7 +181,6 @@ io.on('connection', (socket) => {
 				socket.emit('message', '房间人数已满');
 			} else {
 				console.log(player.name + ' -> 加入了游戏');
-				player.action = action.sleep;
 				// 将自己加入玩家
 				sockets.push(socket);
 				players.push(player);
@@ -169,11 +193,10 @@ io.on('connection', (socket) => {
 	// 玩家退出游戏
 	socket.on('disconnect', _ => {
 		if (!socket.player) {
-			console.log('没进入房间就退出了');
 			return false;
 		}
-		console.log(socket.player.name + ' -> 退出了游戏');
 		if (started) {
+			console.log(socket.player.name + ' -> 掉线了');
 			sockets.forEach(s => {
 				if (s.player.id === socket.player.id) {
 					// 游戏结束后，这个用户需要清除掉
@@ -181,6 +204,7 @@ io.on('connection', (socket) => {
 				}
 			});
 		} else {
+			console.log(socket.player.name + ' -> 退出了游戏');
 			sockets = sockets.filter(s => {
 				return s.player.id !== socket.player.id;
 			});
@@ -204,8 +228,7 @@ io.on('connection', (socket) => {
 		let all = players.every(p => {
 			return p.sleep || p.is_dead;
 		});
-		if (all && players.length > 1) {
-			console.log('进入黑夜');
+		if (all) {
 			// 进入黑夜
 			night();
 			sockets.forEach(s => {
@@ -275,6 +298,7 @@ io.on('connection', (socket) => {
 		});
 		
 		// 狼人是否都袭击结束
+		let ready = true;
 		sockets.forEach(s => {
 			if (s.player.identity === 'wolf' && !s.player.is_dead) {
 				if (s.player.attack_id === '') {

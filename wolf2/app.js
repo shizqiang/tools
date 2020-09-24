@@ -9,7 +9,8 @@ var app = new Vue({
         	offline: false, 
         	name: ''
         },
-        message: ''
+        message: '',
+        disconnected: false
     },
     created() {
     	let id = localStorage.getItem('id');
@@ -18,13 +19,20 @@ var app = new Vue({
 		}
     	let name = localStorage.getItem('name');
 		if (name) {
-			this.player.name = name;
+            this.player.name = name;
+            setTimeout(_ => {
+                socket.emit('name', localStorage.getItem('id'), this.player.name);
+            }, 1000);
+            
 		}
     },
     methods: {
     	
     	setName: function() {
-    		socket.emit('name', localStorage.getItem('id'), this.player.name);
+            if (this.player.name) {
+                localStorage.setItem('name', this.player.name);
+    		    socket.emit('name', localStorage.getItem('id'), this.player.name);
+            }
     	},
 
     	// 进入黑夜
