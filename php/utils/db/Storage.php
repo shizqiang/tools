@@ -28,6 +28,9 @@ class Storage {
             $this->pdo = new \PDO($dsn, $config['user'], $config['pass']);
             $this->pdo->exec('set names ' . $config['charset']);
         } else {
+            // this is two demo 
+            // 'mysql:dbname=testdb;host=127.0.0.1;port=3333';
+            // 'mysql:dbname=testdb;unix_socket=/path/to/socket'
             $this->pdo = new \PDO($dsn);
             $this->pdo->exec('set names ' . $config['charset']);
         }
@@ -39,8 +42,8 @@ class Storage {
             return static::$instance[$name];
         }
         $config = Config::get($name);
-        $dsn = 'mysql:host=%s;dbname=%s';
-        $dsn = sprintf($dsn, $config['host'], $config['db']);
+        $dsn = 'mysql:host=%s;dbname=%s;port=%s';
+        $dsn = sprintf($dsn, $config['host'], $config['db'], $config['port']);
         $torage = new Storage($dsn, $config);
         static::$instance[$name] = $torage;
         return $torage;
@@ -63,7 +66,7 @@ class Storage {
         }
         $config = Config::get('redis');
         $redis = new \Redis();
-        $redis->connect($config['host']);
+        $redis->connect($config['host'], $config['port']);
         $config['auth'] and $redis->auth($config['auth']);
         static::$redis = $redis;
         return $redis;
@@ -189,6 +192,7 @@ class Storage {
         if ($this->limit) {
             $sql .= ' limit ' . $this->limit;
         }
+        Config::debug() and println($sql);
         $result = $this->pdo->exec($sql);
         if ($this->pdo->errorCode() != '00000') {
             throw new \Exception($this->pdo->errorInfo()[2], $this->pdo->errorInfo()[1]);
@@ -370,6 +374,6 @@ class Storage {
         $this->select = '*';
         $this->where = [];
         $this->limit = '';
-        $this->orderby = '';
+        $this->order = '';
     }
 }

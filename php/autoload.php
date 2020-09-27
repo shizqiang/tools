@@ -23,7 +23,7 @@ class Config {
     static $config = [];
 
     public static function parse() {
-        $env = __DIR__ . '/env';
+        $env = __DIR__ . '/.env';
         if (!file_exists($env)) {
             throw new \Exception('[env not set]');
         }
