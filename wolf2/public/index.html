@@ -40,7 +40,7 @@
 		<span v-else-if="player.id == p.id">😁</span>
 		<span v-else>❓</span>
 		<span class="name">{{p.name}}</span>
-		<span v-if="p.offline">掉线</span>
+		<span v-if="p.offline">↓</span>
 		<span v-if="p.sleep && !p.can_doubt && !p.is_dead">🛌</span>
 		<span v-if="player.identity == 'wolf'" v-for="vote in p.votes">🗡</span>
 		<span v-for="t in p.tickets">🗡</span>

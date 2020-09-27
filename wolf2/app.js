@@ -168,7 +168,7 @@ io.on('connection', socket => {
 					socket.player = s.player;
 					s = socket;
 					console.log(player.name + ' -> 重新连接到了游戏');
-					socket.broadcast.emit('players', players, s.player);
+					socket.broadcast.emit('players', players, null);
 					socket.emit('players', players, s.player);
 					offline = true;
 				}
@@ -240,15 +240,17 @@ io.on('connection', socket => {
 				// 唤醒狼人
 				if (s.player.identity === 'wolf') {
 					s.emit('wolf');
-					s.emit('players', players, s.player);
 				}
-			});	
+			});
+			sockets.forEach(s => {
+				s.emit('players', players, s.player);
+			});
 		}
 	});
 	
 	// 预言家查看身份
 	socket.on('identity', id => {
-		players.map(p => {
+		players.forEach(p => {
 			if (p.id === id) {
 				if (p.identity === 'wolf') {
 					socket.emit('message', p.name + ' -> 狼人');
@@ -256,7 +258,7 @@ io.on('connection', socket => {
 					socket.emit('message', p.name + ' -> 好人');
 				}
 				socket.player.can_check_identity = false;
-				socket.emit('players', false, socket.player);	
+				socket.emit('players', null, socket.player);	
 			} 
 		});
 	});
@@ -357,7 +359,7 @@ io.on('connection', socket => {
 		socket.player.can_use_antidote = false;
 		socket.player.can_use_poison = true;
 		if (Yes === 1) {
-			socket.player.can_use_poison = false;
+			socket.player.can_use_poison = false; // 一晚只能用药一次
 			socket.player.has_antidote = false; // 灵药标记为已使用
 			// 救活被袭击的人
 			players.forEach(p => {
