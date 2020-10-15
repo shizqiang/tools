@@ -8,7 +8,7 @@ spl_autoload_register(function($class) {
     }
 });
 
-if (!class_exists('stdClass')) {
+if (!class_exists('Redis')) {
     class Redis {
         function connect() {}
         function auth() {}
@@ -20,6 +20,7 @@ if (!class_exists('stdClass')) {
 }
 
 class Config {
+    
     static $config = [];
 
     public static function parse() {
