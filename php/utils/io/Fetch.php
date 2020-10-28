@@ -30,7 +30,7 @@ class Fetch {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: application/json;charset=UTF-8"));
+//         curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type: application/json;charset=UTF-8"));
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, static::$method);
         if (!empty($data)) {
             curl_setopt($ch, CURLOPT_POST, 1);
