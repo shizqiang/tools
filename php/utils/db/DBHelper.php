@@ -37,7 +37,7 @@ class DBHelper {
         
     }
     
-    public static function mysql($name = 'mysql') {
+    public static function MySQL($name = 'mysql') {
         if (isset(static::$instance[$name])) {
             return static::$instance[$name];
         }
@@ -49,7 +49,7 @@ class DBHelper {
         return $torage;
     }
     
-    public static function sqlite($name = 'sqlite') {
+    public static function SQLite($name = 'sqlite') {
         if (isset(static::$instance[$name])) {
             return static::$instance[$name];
         }
@@ -60,7 +60,7 @@ class DBHelper {
         return $storage;
     }
     
-    public static function redis() {
+    public static function Redis() {
         if (isset(static::$redis)) {
             return static::$redis;
         }
