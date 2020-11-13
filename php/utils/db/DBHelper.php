@@ -3,7 +3,7 @@ namespace utils\db;
 
 use Config;
 
-class Storage {
+class DBHelper {
     
     private static $instance = [];
     
@@ -28,7 +28,7 @@ class Storage {
             $this->pdo = new \PDO($dsn, $config['user'], $config['pass']);
             $this->pdo->exec('set names ' . $config['charset']);
         } else {
-            // this is two demo 
+            // below two lines are demos
             // 'mysql:dbname=testdb;host=127.0.0.1;port=3333';
             // 'mysql:dbname=testdb;unix_socket=/path/to/socket'
             $this->pdo = new \PDO($dsn);
@@ -44,7 +44,7 @@ class Storage {
         $config = Config::get($name);
         $dsn = 'mysql:host=%s;dbname=%s;port=%s';
         $dsn = sprintf($dsn, $config['host'], $config['db'], $config['port']);
-        $torage = new Storage($dsn, $config);
+        $torage = new self($dsn, $config);
         static::$instance[$name] = $torage;
         return $torage;
     }
@@ -55,7 +55,7 @@ class Storage {
         }
         $config = Config::get($name);
         $dsn = 'sqlite:' . $config['file'];
-        $storage = new Storage($dsn, $config);
+        $storage = new self($dsn, $config);
         static::$instance[$name] = $storage;
         return $storage;
     }

@@ -1,13 +1,13 @@
 <?php
 require __DIR__ . '/../autoload.php';
 
-use utils\db\Storage;
+use utils\db\DB;
 use utils\queue\Queue;
 
 ini_set('display_errors', 0);
 
 // 获取MySQL实例 
-$mysql = Storage::mysql();
+$mysql = DB::mysql();
 
 // 查询所有结果 
 $dataList = $mysql->query('show tables');
@@ -23,7 +23,7 @@ foreach ($dataList as $table) {
 // var_dump($dataList);
 
 
-$redis = Storage::redis();
+$redis = DB::redis();
 print $redis->get('name');
 
 // print Fetch::get('https://svn.lsa0.cn/upload.php') ;
