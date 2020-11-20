@@ -216,7 +216,7 @@ class DBHelper {
         if ($this->pdo->errorCode() != '00000') {
             throw new \Exception($this->pdo->errorInfo()[2], $this->pdo->errorInfo()[1]);
         }
-        $stmt->execute(array_merge($bind, $bindSet));
+        $stmt->execute(array_merge($bindSet, $bind));
         if ($stmt->errorCode() != '00000') {
             throw new \Exception($stmt->errorInfo()[2], $stmt->errorInfo()[1]);
         }
