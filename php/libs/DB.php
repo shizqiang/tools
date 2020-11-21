@@ -3,7 +3,7 @@ namespace libs;
 
 use Config;
 
-class DBHelper {
+class DB {
     
     private static $instance = [];
     
@@ -23,7 +23,7 @@ class DBHelper {
 
     private function __construct($dsn, $config) {
         empty($config['charset']) and $config['charset'] = 'utf8mb4';
-        if (!isset($config['file'])) {
+        if (!isset($config['file'])) { // file说明是sqlite
             // 长连接，第三个参数配置为 [\PDO::ATTR_PERSISTENT => true]
             $this->pdo = new \PDO($dsn, $config['user'], $config['pass']);
             $this->pdo->exec('set names ' . $config['charset']);
@@ -34,7 +34,6 @@ class DBHelper {
             $this->pdo = new \PDO($dsn);
             $this->pdo->exec('set names ' . $config['charset']);
         }
-        
     }
     
     public static function MySQL($name = 'mysql') {
@@ -44,9 +43,9 @@ class DBHelper {
         $config = Config::get($name);
         $dsn = 'mysql:host=%s;dbname=%s;port=%s';
         $dsn = sprintf($dsn, $config['host'], $config['db'], $config['port']);
-        $torage = new self($dsn, $config);
-        static::$instance[$name] = $torage;
-        return $torage;
+        $storage= new self($dsn, $config);
+        static::$instance[$name] = $storage;
+        return $storage;
     }
     
     public static function SQLite($name = 'sqlite') {
