@@ -1,7 +1,5 @@
 <?php
-namespace utils\queue;
-
-use utils\db\Storage;
+namespace libs;
 
 abstract class Queue {
     

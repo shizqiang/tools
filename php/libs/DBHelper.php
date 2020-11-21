@@ -1,5 +1,5 @@
 <?php
-namespace utils\db;
+namespace libs;
 
 use Config;
 

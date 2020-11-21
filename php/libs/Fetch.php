@@ -1,5 +1,5 @@
 <?php
-namespace utils\io;
+namespace libs;
 
 class Fetch {
     
