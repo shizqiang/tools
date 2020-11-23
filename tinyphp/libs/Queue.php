@@ -21,8 +21,7 @@ abstract class Queue {
             return false;
         }
         $task = unserialize($str);
-        $task->run();
-        return true;
+        return $task->run();
     }
     
     abstract function run();
