@@ -3,22 +3,17 @@ class Config {
     
     static $config = [];
     
-    public static function parse($env) {
-        if (!file_exists($env)) {
-            throw new \Exception('[env not set]');
-        }
-        $config = parse_ini_file($env, true);
-        static::$config = $config;
-    }
-    
     public static function get($type) {
+    	if (empty(static::$config)) {
+    		static::$config = parse_ini_file('../.env', true);
+    	}
         if (!isset(static::$config[$type])) {
             return null;
         }
         return static::$config[$type];
     }
     
-    static function debug() {
+    public static function debug() {
         return static::$config['app']['debug'];
     }
 }

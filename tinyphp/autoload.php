@@ -1,4 +1,6 @@
 <?php
+file_exists('.env') or die('.env not found');
+
 require 'libs/Log.php';
 require 'libs/Config.php';
 require 'libs/Lang.php';
@@ -72,7 +74,6 @@ if (ajax()) {
 }
 
 try {
-    Config::parse(__DIR__ . '/.env');
     if (is_cli()) {
         function_exists('cli') and cli();
     } elseif (isset($_GET['f']) and function_exists($_GET['f'])) {
