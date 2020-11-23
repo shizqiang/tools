@@ -5,6 +5,9 @@ class Config {
     
     public static function get($type) {
     	if (empty(static::$config)) {
+    		if (!file_exists('../.env')) {
+    			return null;
+    		}
     		static::$config = parse_ini_file('../.env', true);
     	}
         if (!isset(static::$config[$type])) {

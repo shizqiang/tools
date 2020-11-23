@@ -18,14 +18,14 @@ class Model {
     }
     
     /**
-     * rewrite set method, can not set undefined propety 
+     * rewrite set method, can not set propety which is undefined
      * @param string $key
      * @param mixed $value
      */
     function __set($key, $value) {}
     
-    static function find(array $where) {
-        return DB::MySQL()->where('deleted_at is', null)->find(static::$table, $where);
+    static function find(array $where, string $select = '*') {
+    	return DB::MySQL()->where('deleted_at is', null)->select($select)->find(static::$table, $where);
     }
     
     static function search(array $where = [], string $select = '*') {

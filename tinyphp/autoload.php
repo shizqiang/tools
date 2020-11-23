@@ -1,8 +1,6 @@
 <?php
-file_exists('.env') or die('.env not found');
-
-require 'libs/Log.php';
 require 'libs/Config.php';
+require 'libs/Log.php';
 require 'libs/Lang.php';
 
 spl_autoload_register(function($class) {

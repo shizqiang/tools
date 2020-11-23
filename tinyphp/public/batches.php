@@ -1,6 +1,5 @@
 <?php
 use models\Product;
-use models\User;
 
 require '../autoload.php';
 
@@ -19,7 +18,7 @@ function post() {
 }
 
 function cli() {
-    $rows = User::search();
+    $rows = Product::find([], 'id,name');
     var_dump($rows);
 }
 
