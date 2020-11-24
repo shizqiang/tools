@@ -1,6 +1,9 @@
+<!DOCTYPE html>
 <html>
-<?php include 'header.php';?>
-<body>
-<?=$_REQUEST['name']?>
-</body>
+	<head>
+    <?php include 'header.php';?>
+    </head>
+    <body>
+    	<?=time()?>
+    </body>
 </html>
