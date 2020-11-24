@@ -3,25 +3,22 @@ namespace libs;
 
 abstract class Queue {
     
-    const Q = 'QUEUE:';
+    protected static $Q = 'QUEUE:';
     
-    public $data;
-    
-    static function dispach($message, $queue = 'default') {
-        $task = new static();
-        $task->data = $message;
+    public function dispach(string $queue = 'default') {
         $redis = DB::redis();
-        $redis->lPush(static::Q . $queue, serialize($task));
+        $redis->lPush(static::$Q . $queue, serialize($this));
     }
     
-    static function handle($queue = 'default') {
+    public static function handle($queue = 'default') {
         $redis = DB::redis();
-        $str = $redis->rPop(static::Q . $queue);
-        if (!$str) {
-            return false;
+        $str = $redis->rPop(static::$Q . $queue);
+        if ($str) {
+            $task = unserialize($str);
+            $task->run();
+            return true;
         }
-        $task = unserialize($str);
-        return $task->run();
+        return false;
     }
     
     abstract function run();

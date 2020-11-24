@@ -17,6 +17,18 @@ function redirect($url) {
     exit;
 }
 
+function _SESSION_($key, $default = null) {
+    return isset($_SESSION[$key]) ? $_SESSION[$key] : $default;
+}
+
+function _GET_($key, $default = null) {
+    return isset($_GET[$key]) ? $_GET[$key] : $default;
+}
+
+function _POST_($key, $default = null) {
+    return isset($_POST[$key]) ? $_POST[$key] : $default;
+}
+
 function is_cli() {
     return (PHP_SAPI === 'cli' OR defined('STDIN'));
 } 
@@ -93,6 +105,6 @@ try {
         header('content-type: text/html; charset=utf-8', true, $e->getCode());
         print '<script>alert("'. $e->getMessage() .'");</script>';
     } else {
-        print $e->getMessage();
+        println('Error: ' . $e->getMessage());
     }
 }

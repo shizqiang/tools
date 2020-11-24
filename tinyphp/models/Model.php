@@ -5,6 +5,8 @@ use libs\DB;
 
 class Model {
     
+    protected static $pageSize = 10;
+    
     protected static $table = '';
     
     function __construct($data = false) {
@@ -30,6 +32,22 @@ class Model {
     
     static function search(array $where = [], string $select = '*') {
         return DB::MySQL()->where('deleted_at is', null)->select($select)->search(static::$table, $where);
+    }
+    
+    static function pages(array $where = [], string $select = '*') {
+        if (isset($_GET['pageSize']) and is_numeric($_GET['pageSize']) and $_GET['pageSize'] > 0) {
+            static::$pageSize = $_GET['pageSize'];
+        }
+        $skip = 0;
+        $page = 1;
+        if (isset($_GET['page']) and is_numeric($_GET['page']) and $_GET['page'] > 0) {
+            $page = $_GET['page'];
+        }
+        $skip = static::$pageSize * ($page - 1);
+        $limit = $skip . ',' . static::$pageSize;
+        $row = DB::MySQL()->where('deleted_at is', null)->select('count(1) total')->one(static::$table);
+        $rows = DB::MySQL()->where('deleted_at is', null)->limit($limit)->select($select)->search(static::$table, $where);
+        return [$row->total, $rows, ceil($row->total / static::$pageSize), $page];
     }
     
     function store() {
