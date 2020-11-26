@@ -3,11 +3,15 @@ namespace models;
 
 use libs\DB;
 
-class Model {
+abstract class Model {
     
     protected static $pageSize = 10;
     
     protected static $table = '';
+    
+    protected static $softDelete = true;
+    
+    protected $_errors = [];
     
     function __construct($data = false) {
         if (is_null($data)) {
@@ -27,11 +31,17 @@ class Model {
     function __set($key, $value) {}
     
     static function find(array $where, string $select = '*') {
-    	return DB::MySQL()->where('deleted_at is', null)->select($select)->find(static::$table, $where);
+        if (static::$softDelete) {
+            return DB::MySQL()->where('deleted_at is', null)->select($select)->find(static::$table, $where);
+        }
+        return DB::MySQL()->select($select)->find(static::$table, $where);
     }
     
     static function search(array $where = [], string $select = '*') {
-        return DB::MySQL()->where('deleted_at is', null)->select($select)->search(static::$table, $where);
+        if (static::$softDelete) {
+            return DB::MySQL()->where('deleted_at is', null)->select($select)->search(static::$table, $where);
+        }
+        return DB::MySQL()->select($select)->search(static::$table, $where);
     }
     
     static function pages(array $where = [], string $select = '*') {
@@ -45,48 +55,60 @@ class Model {
         }
         $skip = static::$pageSize * ($page - 1);
         $limit = $skip . ',' . static::$pageSize;
-        $row = DB::MySQL()->where('deleted_at is', null)->select('count(1) total')->one(static::$table);
-        $rows = DB::MySQL()->where('deleted_at is', null)->limit($limit)->select($select)->search(static::$table, $where);
-        return [$row->total, $rows, ceil($row->total / static::$pageSize), $page];
+        if (static::$softDelete) {
+            $row = DB::MySQL()->where('deleted_at is', null)->select('count(1) total')->one(static::$table);
+            $rows = DB::MySQL()->where('deleted_at is', null)->limit($limit)->select($select)->search(static::$table, $where);
+            return [$row->total, $rows, ceil($row->total / static::$pageSize), $page];
+        } else {
+            $row = DB::MySQL()->select('count(1) total')->one(static::$table);
+            $rows = DB::MySQL()->limit($limit)->select($select)->search(static::$table, $where);
+            return [$row->total, $rows, ceil($row->total / static::$pageSize), $page];
+        }
     }
     
     function store() {
-        if (!empty($this->validate())) {
-            $_REQUEST['errors'] = $this->validate();
-            throw new \Exception('param invalid', 406);
+    	if ($this->_errors) {
+            $_REQUEST['errors'] = $this->_errors;
+            throw new \Exception('invalid model attr', 406);
         }
         DB::MySQL()->insert(static::$table, $this);
     }
 
     function update() {
-        if (!empty($this->validate())) {
-            $_REQUEST['errors'] = $this->validate();
-            throw new \Exception('param invalid', 406);
-        }
+    	if ($this->_errors) {
+    		$_REQUEST['errors'] = $this->_errors;
+    		throw new \Exception('invalid model attr', 406);
+    	}
         return DB::MySQL()->where('id =', $this->id)->update(static::$table, $this);
     }
     
-    function delete($software = true) {
-        if (!$software) {
-            DB::MySQL()->where('id =', $this->id)->delete(static::$table);
-        } else {
+    function delete() {
+        if (static::$softDelete) {
             DB::MySQL()->where('id =', $this->id)->update(static::$table, ['deleted_at', date('Y-m-d H:i:s')]);
+        } else {
+            DB::MySQL()->where('id =', $this->id)->delete(static::$table);
         }
     }
     
-    protected function validate() {
-        return [];
+    /**
+     * :抽象方法，由具体的子类实现验证
+     */
+    function validate() {
+    	if ($this->_errors) {
+    		$_REQUEST['errors'] = $this->_errors;
+    		throw new \Exception('invalid model attr', 406);
+    	}
     }
     
-    protected function str_range($val, $min, $max) {
+    protected function str($val, $min, $max) {
         return strlen($val) >= $min and strlen($val) <= $max;
     }
     
-    protected function int_range($val, $min, $max) {
+    protected function int($val, $min, $max) {
         
     }
     
-    protected function num_range($val, $min, $max) {
+    protected function num($val, $min, $max) {
         
     }
     

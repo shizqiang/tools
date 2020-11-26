@@ -1,8 +1,10 @@
 <?php
+namespace libs;
+
 class Log {
     
-    private static $PATH = 'd:/var/log/web';
-    
+    private static $PATH = '/tmp';
+     
     static function debug($str, $data = null) {
         if (Config::debug()) {
             $str = 'd -> ' . $str;

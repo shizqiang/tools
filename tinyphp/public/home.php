@@ -1,8 +1,7 @@
 <?php
 
-use tasks\MailTask;
-
 require '../autoload.php';
 
-$task = new MailTask('123');
-$task->dispach();
+function get() {
+    include '../views/home.php';
+}

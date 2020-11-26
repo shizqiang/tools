@@ -1,8 +1,6 @@
 <?php
 namespace libs;
 
-use Config;
-
 class DB {
     
     private static $instance = [];
@@ -130,6 +128,10 @@ class DB {
         if ($_ === false) {
             throw new \Exception('[database ' . $db . ' not exists]');
         }
+    }
+    
+    public function lastInsertId() {
+        return $this->pdo->lastInsertId();
     }
     
     public function query($sql, $bind = [], $option = null) {
@@ -322,6 +324,9 @@ class DB {
         $not_batch = false;
         $_set = false;
         foreach ($data as $column => $v) {
+            if (is_null($v)) {
+                continue;
+            }
             if (is_array($v) or is_object($v)) {
                 if ($not_batch) {
                     continue;

@@ -1,7 +1,11 @@
 <?php
+namespace libs;
+
 class Lang {
     
-    static $config = [];
+    private static $config = [];
+    
+    private static $defaultLang = 'zh-CN';
     
     private static function parse($file) {
         static::$config = parse_ini_file($file);
@@ -10,7 +14,7 @@ class Lang {
     public static function get($name) {
         if (empty(static::$config)) {
             if (!isset($_SESSION['language']) or !file_exists(__DIR__ . '/../i18n/'. $_SESSION['language'] .'.ini')) {
-                static::parse(__DIR__ . '/../i18n/zh_CN.ini');
+                static::parse(__DIR__ . '/../i18n/'. static::$defaultLang .'.ini');
             } elseif (file_exists(__DIR__ . '/../i18n/'. $_SESSION['language'] .'.ini')) {
                 static::parse(__DIR__ . '/../i18n/'. $_SESSION['language'] .'.ini');
             }

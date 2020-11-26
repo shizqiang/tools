@@ -16,4 +16,12 @@ class Activity extends Model {
         'NORMAL' => '普通活动'
     ];
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \models\Model::validate()
+     */
+    function validate() {
+    	
+    }
 }

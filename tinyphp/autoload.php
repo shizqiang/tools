@@ -1,7 +1,6 @@
 <?php
-require 'libs/Config.php';
-require 'libs/Log.php';
-require 'libs/Lang.php';
+use libs\Lang;
+use models\User;
 
 spl_autoload_register(function($class) {
     $file = dirname(__FILE__) . DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
@@ -11,11 +10,6 @@ spl_autoload_register(function($class) {
         throw new Exception($file . ' not found');
     }
 });
-
-function redirect($url) {
-    header('location:'. $url);
-    exit;
-}
 
 function _SESSION_($key, $default = null) {
     return isset($_SESSION[$key]) ? $_SESSION[$key] : $default;
@@ -33,6 +27,28 @@ function is_cli() {
     return (PHP_SAPI === 'cli' OR defined('STDIN'));
 } 
 
+function getCurrentUser(): User {
+    $user = _SESSION_('current_user');
+    if (!$user) {
+        if (ajax()) {
+            header('content-type: application/json; charset=utf-8', true, 401);
+            print jsonFailed('No Auth');
+            exit();
+        } elseif (is_cli()) {
+            println('No current user');
+            exit();
+        } else {
+            redirect('/login');
+        }
+    }
+    return $user;
+}
+
+function redirect($url) {
+    header('location:'. $url, true, 302);
+    exit();
+}
+
 function ajax() {
     if (!is_cli()) {
         return isset($_SERVER["HTTP_X_REQUESTED_WITH"]) &&
@@ -43,6 +59,27 @@ function ajax() {
 
 function json($data) {
     return json_encode($data, JSON_UNESCAPED_UNICODE);
+}
+
+function jsonSuccess($data = null) {
+    return json(['data' => $data, 'message' => 'SUCCESS', 'code' => 0]);
+}
+
+function jsonFailed($message, $data = null, $code = 1) {
+    return json(['data' => $data, 'message' => $message, 'code' => $code]);
+}
+
+function createNonceStr($length = 16) {
+    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    $str = "";
+    for ($i = 0; $i < $length; $i++) {
+        $str .= substr($chars, mt_rand(0, strlen($chars) - 1), 1);
+    }
+    return $str;
+}
+
+function i18n($str) {
+    return Lang::get($str);
 }
 
 function println($msg = '', $color = '', $loading = false) {
@@ -78,9 +115,14 @@ function println($msg = '', $color = '', $loading = false) {
 
 
 if (ajax()) {
-    header('content-type: application/json');
+    header('content-type: application/json; charset=utf-8');
 } elseif (!is_cli()) {
     header('content-type: text/html; charset=utf-8');
+}
+
+// set language 
+if (!isset($_SESSION['language']) and isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+    $_SESSION['language'] = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE'])[0];
 }
 
 try {
@@ -100,11 +142,11 @@ try {
 } catch (\Exception $e) {
     if (ajax()) {
         !isset($_REQUEST['errors']) and $_REQUEST['errors'] = null;
-        print json(['data' => $_REQUEST['errors'], 'message' => $e->getMessage(), 'code' => $e->getCode()]);
-    } elseif (!is_cli()) {
+        print jsonFailed($e->getMessage(), $_REQUEST['errors'], $e->getCode());
+    } elseif (is_cli()) {
+        println('Error: ' . (isset($_REQUEST['errors']) ? json_encode($_REQUEST['errors']) : $e->getMessage()));
+    } else {
         header('content-type: text/html; charset=utf-8', true, $e->getCode());
         print '<script>alert("'. $e->getMessage() .'");</script>';
-    } else {
-        println('Error: ' . $e->getMessage());
     }
 }

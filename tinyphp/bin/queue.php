@@ -1,5 +1,6 @@
 <?php
 use libs\Queue;
+use libs\Log;
 
 require '../autoload.php';
 
@@ -15,10 +16,10 @@ if (count($argv) > 1) {
 while (true) {
     $_ = Queue::handle($task);
     if (!$_) {
-        println('sleeping...', 'blue', true);
+        sleep(1);
     }
     if (file_exists('/tmp/stop')) {
-        println('stoped', 'red');
+        Log::info('Task -> ' . $task . ' -> stoped');
         break;
     }
 }
