@@ -1,14 +1,14 @@
 <?php
 require __DIR__ . '/../autoload.php';
 
-use utils\db\DBHelper;
+use libs\DB;
 
 ini_set('display_errors', 0);
 
 // 获取MySQL实例
-$mysql = DBHelper::mysql();
+$mysql = DB::mysql();
 
-$redis = DBHelper::redis();
+$redis = DB::redis();
 
 $backupRedis = new Redis();
 $backupRedis->connect('127.0.0.1', 6381);
