@@ -105,11 +105,8 @@ class DB {
         return $this;
     }
     
-    public function limit($n) {
-//         if (!is_int($n)) {
-//            throw new \Exception('[limit must be int]'); 
-//         }
-        $this->limit = $n;
+    public function limit($limit) {
+        $this->limit = $limit;
         return $this;
     }
 
