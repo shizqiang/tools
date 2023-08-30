@@ -28,7 +28,6 @@ class DB {
             $this->pdo = new \PDO($dsn, $config['user'], $config['pass']);
             $this->pdo->exec('set names ' . $config['charset']);
         } else {
-            // below two lines are demos
             // 'mysql:dbname=testdb;host=127.0.0.1;port=3333';
             // 'mysql:dbname=testdb;unix_socket=/path/to/socket'
             $this->pdo = new \PDO($dsn);
